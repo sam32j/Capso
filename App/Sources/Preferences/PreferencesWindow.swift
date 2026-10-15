@@ -35,12 +35,12 @@ final class PreferencesWindow {
             backing: .buffered,
             defer: false
         )
-        window.title = String(localized: "Settings")
+        window.title = String(localized: "Capso Settings")
         window.minSize = NSSize(width: 680, height: 480)
         window.isReleasedWhenClosed = false
         window.center()
         let viewModel = PreferencesViewModel(settings: settings, permissionManager: permissionManager)
-        let hostingController = PreferencesHostingController(
+        let hostingController = NSHostingController(
             rootView: PreferencesView(viewModel: viewModel, updateManager: updateManager, initialTab: tab)
         )
         window.contentViewController = hostingController
@@ -48,39 +48,5 @@ final class PreferencesWindow {
         self.window = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-}
-
-private final class PreferencesHostingController<Content: View>: NSHostingController<Content> {
-    override func viewDidLayout() {
-        super.viewDidLayout()
-        configureSplitView()
-    }
-
-    private func configureSplitView() {
-        func scanVC(_ vc: NSViewController) -> NSSplitViewController? {
-            if let svc = vc as? NSSplitViewController { return svc }
-            for child in vc.children {
-                if let found = scanVC(child) { return found }
-            }
-            return nil
-        }
-
-        func scanForSplitViewController(in view: NSView) -> NSSplitViewController? {
-            if let sv = view as? NSSplitView, let svc = sv.delegate as? NSSplitViewController {
-                return svc
-            }
-            for subview in view.subviews {
-                if let found = scanForSplitViewController(in: subview) { return found }
-            }
-            return nil
-        }
-
-        let svc = scanVC(self) ?? scanForSplitViewController(in: view)
-        if let svc, let sidebarItem = svc.splitViewItems.first {
-            sidebarItem.canCollapse = false
-            sidebarItem.minimumThickness = 190
-            sidebarItem.maximumThickness = 190
-        }
     }
 }

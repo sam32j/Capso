@@ -4,6 +4,7 @@ import SharedKit
 
 struct ExportSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
+    @Environment(\.isActivePreferencesTab) private var isActiveTab
     @State private var showingFilenameTokens = false
     @State private var filenameTemplateDraft = ""
 
@@ -29,7 +30,6 @@ struct ExportSettingsView: View {
                         .pickerStyle(.segmented)
                         .frame(width: 220)
                     }
-                    .searchHighlightTarget("export-quality")
                     SettingRow(
                         label: "Screenshot Format",
                         sublabel: "HEIC produces the smallest files; PNG is lossless",
@@ -47,7 +47,6 @@ struct ExportSettingsView: View {
                         .pickerStyle(.menu)
                         .frame(width: 120)
                     }
-                    .searchHighlightTarget("export-screenshot-format")
                     if viewModel.screenshotOutputFormat.isLossy {
                         SettingRow(label: "Screenshot Quality", showDivider: true) {
                             HStack(spacing: 8) {
@@ -63,7 +62,6 @@ struct ExportSettingsView: View {
                                 .labelsHidden()
                             }
                         }
-                        .searchHighlightTarget("export-screenshot-quality")
                     }
                 }
             }
@@ -84,15 +82,13 @@ struct ExportSettingsView: View {
                             .controlSize(.small)
                         }
                     }
-                    .searchHighlightTarget("export-location")
                     SettingRow(label: "Monthly Screenshot Folders", sublabel: "Save screenshots into yyyy-MM subfolders", showDivider: true) {
                         Toggle("", isOn: $viewModel.screenshotMonthlyFolders)
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("export-monthly-folders")
                     filenameTemplateEditor
-                        .searchHighlightTarget("export-filename-template")
+                        .searchableSetting("Screenshot Filename", subtitle: "Extension is added automatically")
                 }
             }
 
@@ -110,16 +106,18 @@ struct ExportSettingsView: View {
                         .pickerStyle(.menu)
                         .frame(width: 180)
                     }
-                    .searchHighlightTarget("export-opened-images")
                 }
             }
         }
-        .searchHighlightTarget("export-tab")
-        .onAppear {
-            filenameTemplateDraft = viewModel.screenshotFilenameTemplate
+        .onChange(of: isActiveTab, initial: true) { wasActive, isActive in
+            if isActive {
+                filenameTemplateDraft = viewModel.screenshotFilenameTemplate
+            } else if wasActive {
+                normalizeFilenameTemplate()
+            }
         }
         .onDisappear {
-            normalizeFilenameTemplate()
+            if isActiveTab { normalizeFilenameTemplate() }
         }
         .onChange(of: filenameTemplateDraft) { _, newValue in
             viewModel.screenshotFilenameTemplate = newValue

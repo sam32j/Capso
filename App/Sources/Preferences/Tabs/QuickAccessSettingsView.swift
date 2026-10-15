@@ -29,7 +29,6 @@ struct QuickAccessSettingsView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                 }
-                .searchHighlightTarget("quickaccess-position")
             }
 
             SettingGroup(title: "Auto-Close") {
@@ -39,7 +38,6 @@ struct QuickAccessSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("quickaccess-auto-close")
                     SettingRow(label: "Close After", showDivider: true) {
                         Picker("", selection: $viewModel.quickAccessAutoCloseInterval) {
                             Text("5s").tag(5)
@@ -56,11 +54,9 @@ struct QuickAccessSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("quickaccess-close-after-drag")
                 }
             }
         }
-        .searchHighlightTarget("quickaccess-tab")
     }
 
 

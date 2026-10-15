@@ -3,6 +3,7 @@ import SharedKit
 
 struct PermissionSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
+    @Environment(\.isActivePreferencesTab) private var isActiveTab
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -21,7 +22,6 @@ struct PermissionSettingsView: View {
                         subtitle: "Required for screenshots and recording",
                         isGranted: viewModel.screenRecordingGranted
                     )
-                    .searchHighlightTarget("permissions-screen-recording")
                     permissionRow(
                         kind: .accessibility,
                         title: "Accessibility",
@@ -29,7 +29,6 @@ struct PermissionSettingsView: View {
                         isGranted: viewModel.accessibilityGranted,
                         showDivider: true
                     )
-                    .searchHighlightTarget("permissions-accessibility")
                     permissionRow(
                         kind: .inputMonitoring,
                         title: "Input Monitoring",
@@ -37,7 +36,6 @@ struct PermissionSettingsView: View {
                         isGranted: viewModel.inputMonitoringGranted,
                         showDivider: true
                     )
-                    .searchHighlightTarget("permissions-input-monitoring")
                     permissionRow(
                         kind: .camera,
                         title: "Camera",
@@ -45,7 +43,6 @@ struct PermissionSettingsView: View {
                         isGranted: viewModel.cameraGranted,
                         showDivider: true
                     )
-                    .searchHighlightTarget("permissions-camera")
                     permissionRow(
                         kind: .microphone,
                         title: "Microphone",
@@ -53,20 +50,19 @@ struct PermissionSettingsView: View {
                         isGranted: viewModel.microphoneGranted,
                         showDivider: true
                     )
-                    .searchHighlightTarget("permissions-microphone")
                 }
             }
         }
-        .searchHighlightTarget("permissions-tab")
-        .task {
+        .task(id: isActiveTab) {
+            guard isActiveTab else { return }
             await viewModel.refreshPermissions()
         }
     }
 
     private func permissionRow(
         kind: PermissionKind,
-        title: LocalizedStringKey,
-        subtitle: LocalizedStringKey,
+        title: LocalizedStringResource,
+        subtitle: LocalizedStringResource,
         isGranted: Bool,
         showDivider: Bool = false
     ) -> some View {
