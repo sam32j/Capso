@@ -82,7 +82,7 @@ jobs:
             build
 
           app='build/personal/Build/Products/Release/Capso.app'
-          lipo -verify_arch arm64 x86_64 "$app/Contents/MacOS/Capso"
+          lipo "$app/Contents/MacOS/Capso" -verify_arch arm64 x86_64
 
           # Keep personal builds from automatically installing upstream releases.
           /usr/libexec/PlistBuddy -c 'Set :SUEnableAutomaticChecks false' "$app/Contents/Info.plist"
