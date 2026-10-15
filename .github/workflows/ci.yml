@@ -2,9 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,6 +13,7 @@ permissions:
 jobs:
   build-and-test:
     runs-on: macos-15
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -63,3 +65,74 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             -only-testing:CapsoTests
+
+      - name: Build universal personal app
+        run: |
+          set -euo pipefail
+          xcodebuild -project Capso.xcodeproj \
+            -scheme Capso \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/personal \
+            ARCHS='arm64 x86_64' \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_IDENTITY='-' \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+          app='build/personal/Build/Products/Release/Capso.app'
+          lipo -verify_arch arm64 x86_64 "$app/Contents/MacOS/Capso"
+
+          # Keep personal builds from automatically installing upstream releases.
+          /usr/libexec/PlistBuddy -c 'Set :SUEnableAutomaticChecks false' "$app/Contents/Info.plist"
+
+          # Sign nested Sparkle executables and bundles from the inside out.
+          # Ad hoc signatures need no certificate, account, or notarization.
+          frameworks="$app/Contents/Frameworks"
+          if [ -d "$frameworks" ]; then
+            while IFS= read -r -d '' binary; do
+              if file -b "$binary" | grep -q 'Mach-O'; then
+                codesign --force --sign - "$binary"
+              fi
+            done < <(find "$frameworks" -type f -print0)
+            while IFS= read -r -d '' bundle; do
+              codesign --force --sign - "$bundle"
+            done < <(find "$frameworks" -depth -type d \( -name '*.xpc' -o -name '*.app' -o -name '*.framework' \) -print0)
+          fi
+          codesign --force --sign - --options runtime \
+            --entitlements App/Entitlements/Capso.entitlements "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+
+          mkdir -p build/artifacts
+          ditto -c -k --sequesterRsrc --keepParent "$app" \
+            build/artifacts/Capso-personal-universal.zip
+          cd build/artifacts
+          shasum -a 256 Capso-personal-universal.zip > SHA256SUMS.txt
+
+      - name: Upload personal Mac download
+        id: personal-download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capso-personal-universal-${{ github.run_number }}
+          path: build/artifacts/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Write download instructions
+        env:
+          DOWNLOAD_URL: ${{ steps.personal-download.outputs.artifact-url }}
+        run: |
+          {
+            echo '## Personal Capso build'
+            echo "[Download for Mac (Intel and Apple Silicon)]($DOWNLOAD_URL)"
+            echo
+            echo 'Sign in to GitHub to download. Artifacts expire after 30 days.'
+            echo 'Unzip the artifact, then unzip Capso-personal-universal.zip and move Capso.app to Applications.'
+            echo 'Requires macOS 15+. This app uses ad hoc signing and is not notarized.'
+            echo 'If macOS blocks it, use System Settings > Privacy & Security > Open Anyway.'
+            echo 'Grant Screen Recording, Camera, and Microphone permissions when needed.'
+            echo 'Automatic upstream update checks are disabled for this personal build.'
+            echo 'Test an area capture, clipboard/save, and a short recording on your Mac.'
+          } >> "$GITHUB_STEP_SUMMARY"
