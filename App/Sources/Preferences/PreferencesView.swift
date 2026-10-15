@@ -1,92 +1,17 @@
-// App/Sources/Preferences/PreferencesView.swift
 import Combine
 import SwiftUI
-import AppKit
 
-enum PreferencesTab: String, CaseIterable, Identifiable, Sendable {
-    case general
-    case permissions
-    case screenshots
-    case recording
-    case quickAccess
-    case cloudShare
-    case export
-    case ocr
-    case shortcuts
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringKey {
-        LocalizedStringKey(displayTitle)
-    }
-
-    var displayTitle: String {
-        switch self {
-        case .general: String(localized: "General")
-        case .permissions: String(localized: "Permissions")
-        case .screenshots: String(localized: "Screenshots")
-        case .recording: String(localized: "Recording")
-        case .quickAccess: String(localized: "Quick Access")
-        case .cloudShare: String(localized: "Cloud Share")
-        case .export: String(localized: "Export")
-        case .ocr: String(localized: "Text & Translation")
-        case .shortcuts: String(localized: "Shortcuts")
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .general: "gearshape"
-        case .permissions: "lock.shield"
-        case .screenshots: "camera"
-        case .recording: "record.circle"
-        case .quickAccess: "bolt"
-        case .cloudShare: "icloud"
-        case .export: "folder"
-        case .ocr: "text.viewfinder"
-        case .shortcuts: "keyboard"
-        }
-    }
-
-    var badgeColor: Color {
-        switch self {
-        case .general: .gray
-        case .permissions: .blue
-        case .screenshots: .indigo
-        case .recording: .red
-        case .quickAccess: .orange
-        case .cloudShare: .cyan
-        case .export: .teal
-        case .ocr: .green
-        case .shortcuts: .purple
-        }
-    }
-}
-
-enum PreferencesSidebarItem: Hashable, Identifiable {
+enum PreferencesSidebarItem: Hashable {
     case tab(PreferencesTab)
     case searchResult(SettingSearchItem)
-
-    var id: String {
-        switch self {
-        case .tab(let tab): return "tab-\(tab.rawValue)"
-        case .searchResult(let item): return "search-\(item.id)"
-        }
-    }
-
-    var targetTab: PreferencesTab {
-        switch self {
-        case .tab(let tab): return tab
-        case .searchResult(let item): return item.tab
-        }
-    }
 }
 
 struct PreferencesView: View {
     @State private var selectedSidebarItem: PreferencesSidebarItem?
-    @State private var activeTab: PreferencesTab = .general
+    @State private var activeTab: PreferencesTab
     @State private var searchText = ""
-    @State private var highlightedItemId: String? = nil
+    @State private var searchItems: [SettingSearchItem] = []
+    @State private var highlightedItemID: String?
     let viewModel: PreferencesViewModel
     let updateManager: UpdateManager?
 
@@ -94,167 +19,97 @@ struct PreferencesView: View {
         self.viewModel = viewModel
         self.updateManager = updateManager
         let tab = initialTab ?? .general
-        self._activeTab = State(initialValue: tab)
-        self._selectedSidebarItem = State(initialValue: .tab(tab))
-    }
-
-    private var currentTab: PreferencesTab {
-        selectedSidebarItem?.targetTab ?? activeTab
-    }
-
-    private var isSearching: Bool {
-        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var matchingSearchItems: [SettingSearchItem] {
-        SettingSearchIndex.items.filter { $0.matches(query: searchText) }
+        _activeTab = State(initialValue: tab)
+        _selectedSidebarItem = State(initialValue: .tab(tab))
     }
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedSidebarItem) {
-                if !isSearching {
-                    ForEach(PreferencesTab.allCases) { tab in
-                        NavigationLink(value: PreferencesSidebarItem.tab(tab)) {
-                            HStack(spacing: 10) {
-                                Image(systemName: tab.icon)
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 22, height: 22)
-                                    .background(tab.badgeColor.gradient, in: RoundedRectangle(cornerRadius: 5.5, style: .continuous))
-                                Text(tab.title)
-                                    .font(.system(size: 13))
-                                    .lineLimit(1)
-                                    .layoutPriority(1)
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                } else {
-                    ForEach(matchingSearchItems) { item in
-                        NavigationLink(value: PreferencesSidebarItem.searchResult(item)) {
-                            HStack(spacing: 8) {
-                                Image(systemName: item.tab.icon)
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 18, height: 18)
-                                    .background(item.tab.badgeColor.gradient, in: RoundedRectangle(cornerRadius: 4.5, style: .continuous))
-
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(item.title)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                    Text(item.breadcrumb)
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                }
-            }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 190, ideal: 190, max: 190)
-            .searchable(text: $searchText, placement: .sidebar, prompt: Text("Search"))
-            .toolbar(removing: .sidebarToggle)
-            .overlay {
-                if isSearching && matchingSearchItems.isEmpty {
-                    VStack(spacing: 8) {
-                        Spacer()
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 34))
-                            .foregroundStyle(.tertiary)
-                            .padding(.bottom, 2)
-                        Text("No results")
-                            .font(.system(size: 13, weight: .semibold))
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.primary)
-                        Text("Check the spelling or try a\nnew search.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(nil)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-                }
-            }
+            PreferencesSidebar(
+                selection: $selectedSidebarItem,
+                searchText: $searchText,
+                items: SettingSearchIndex.results(for: searchText, in: searchItems)
+            )
         } detail: {
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    tabView(for: activeTab)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
-                        .padding(.bottom, 20)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .navigationTitle(activeTab.displayTitle)
-                .toolbar {
-                    ToolbarItem(placement: .automatic) {
-                        Spacer()
-                    }
-                }
-                .background(Color(nsColor: .windowBackgroundColor))
-                .environment(\.highlightedSettingId, highlightedItemId)
-                .onChange(of: highlightedItemId) { _, newId in
-                    guard let newId else { return }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                        withAnimation(.easeInOut(duration: 0.35)) {
-                            scrollProxy.scrollTo(newId, anchor: .center)
-                        }
-                    }
+            // Keep metadata from unvisited tabs in the same preference tree.
+            // Inactive rows omit their controls, including shortcut recorders.
+            ZStack(alignment: .topLeading) {
+                ForEach(PreferencesTab.allCases) { tab in
+                    tabPage(tab)
+                        .settingSearchTab(tab)
+                        .environment(\.isActivePreferencesTab, tab == activeTab)
+                        .environment(\.highlightedSettingId, tab == activeTab ? highlightedItemID : nil)
+                        .opacity(tab == activeTab ? 1 : 0)
+                        .allowsHitTesting(tab == activeTab)
+                        .disabled(tab != activeTab)
+                        .accessibilityHidden(tab != activeTab)
+                        .zIndex(tab == activeTab ? 1 : 0)
                 }
             }
+            .navigationTitle(activeTab.displayTitle)
+            .background(Color(nsColor: .windowBackgroundColor))
         }
-        .frame(minWidth: 700, idealWidth: 800, maxWidth: .infinity, minHeight: 480, idealHeight: 560, maxHeight: .infinity)
-        .background {
-            SplitViewConfigurator()
+        .frame(minWidth: 700, idealWidth: 800, minHeight: 480, idealHeight: 560)
+        .background { SplitViewConfigurator() }
+        .onPreferenceChange(SettingSearchPreferenceKey.self) { items in
+            Task { @MainActor in searchItems = items }
         }
-        .onChange(of: selectedSidebarItem) { _, newValue in
-            if case .searchResult(let item) = newValue {
+        .onChange(of: selectedSidebarItem) { _, selection in
+            switch selection {
+            case .searchResult(let item):
                 activeTab = item.tab
-                if highlightedItemId == item.id {
-                    highlightedItemId = nil
-                    DispatchQueue.main.async {
-                        highlightedItemId = item.id
-                    }
-                } else {
-                    highlightedItemId = item.id
-                }
-            } else if let target = newValue?.targetTab {
-                activeTab = target
-                highlightedItemId = nil
+                highlightedItemID = item.id
+            case .tab(let tab):
+                activeTab = tab
+                highlightedItemID = nil
+            case nil:
+                break
             }
         }
-        .onChange(of: searchText) { _, newValue in
-            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty {
-                selectedSidebarItem = .tab(activeTab)
-                highlightedItemId = nil
-            } else {
+        .onChange(of: searchText) { _, text in
+            selectedSidebarItem = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? .tab(activeTab) : nil
+            highlightedItemID = nil
+        }
+        .onChange(of: searchItems) { _, items in
+            if let highlightedItemID, !items.contains(where: { $0.id == highlightedItemID }) {
+                self.highlightedItemID = nil
                 selectedSidebarItem = nil
-                highlightedItemId = nil
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openScreenshotSettings)) { notification in
-            let tab = (notification.object as? PreferencesTab) ?? .screenshots
-            searchText = ""
-            activeTab = tab
-            selectedSidebarItem = .tab(tab)
-            highlightedItemId = nil
+            navigate(to: (notification.object as? PreferencesTab) ?? .screenshots)
         }
         .onReceive(NotificationCenter.default.publisher(for: .preferencesSwitchTab)) { notification in
             if let tab = notification.object as? PreferencesTab {
-                searchText = ""
-                activeTab = tab
-                selectedSidebarItem = .tab(tab)
-                highlightedItemId = nil
+                navigate(to: tab)
+            }
+        }
+    }
+
+    private func navigate(to tab: PreferencesTab) {
+        searchText = ""
+        activeTab = tab
+        selectedSidebarItem = .tab(tab)
+        highlightedItemID = nil
+    }
+
+    private func tabPage(_ tab: PreferencesTab) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                tabView(for: tab)
+                    .searchableSetting(tab.localizedTitle, id: "tab")
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .task(id: highlightedItemID) {
+                guard tab == activeTab, let highlightedItemID else { return }
+                await Task.yield()
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    proxy.scrollTo(highlightedItemID, anchor: .center)
+                }
             }
         }
     }
@@ -281,46 +136,5 @@ struct PreferencesView: View {
         case .shortcuts:
             ShortcutSettingsView(viewModel: viewModel)
         }
-    }
-}
-
-/// Disables collapsing the sidebar on mouse drag and enforces the minimum sidebar width
-private struct SplitViewConfigurator: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView(frame: .zero)
-        DispatchQueue.main.async { [weak view] in
-            guard let view else { return }
-            configureSplitView(from: view)
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async { [weak nsView] in
-            guard let nsView else { return }
-            configureSplitView(from: nsView)
-        }
-    }
-
-    private func configureSplitView(from view: NSView) {
-        guard let window = view.window else { return }
-        
-        // Find NSSplitViewController in the window's controller hierarchy
-        if let splitViewController = findSplitViewController(in: window.contentViewController) {
-            if let sidebarItem = splitViewController.splitViewItems.first {
-                sidebarItem.canCollapse = false
-                sidebarItem.minimumThickness = 190
-                sidebarItem.maximumThickness = 190
-            }
-        }
-    }
-
-    private func findSplitViewController(in vc: NSViewController?) -> NSSplitViewController? {
-        guard let vc else { return nil }
-        if let svc = vc as? NSSplitViewController { return svc }
-        for child in vc.children {
-            if let svc = findSplitViewController(in: child) { return svc }
-        }
-        return nil
     }
 }

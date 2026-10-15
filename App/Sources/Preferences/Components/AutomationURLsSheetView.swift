@@ -4,7 +4,7 @@ import AppKit
 
 struct AutomationCommandItem: Identifiable {
     let id: String
-    let name: LocalizedStringKey
+    let name: LocalizedStringResource
     let urlString: String
 }
 

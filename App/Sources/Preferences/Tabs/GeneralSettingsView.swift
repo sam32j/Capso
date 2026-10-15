@@ -33,13 +33,11 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("general-launch-at-login")
                     SettingRow(label: "Show Menu Bar Icon", sublabel: "Hide for a minimalist menu bar — shortcuts still work", showDivider: true) {
                         Toggle("", isOn: menuBarToggleBinding)
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("general-menu-bar-icon")
                 }
             }
 
@@ -53,7 +51,6 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("general-automation-urls")
                     SettingRow(
                         label: "Supported URLs",
                         sublabel: "View all commands for Raycast, Alfred, and Shortcuts",
@@ -64,7 +61,6 @@ struct GeneralSettingsView: View {
                         }
                         .controlSize(.small)
                     }
-                    .searchHighlightTarget("general-supported-urls")
                 }
             }
 
@@ -75,7 +71,6 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("general-shutter-sound")
                 }
             }
 
@@ -90,7 +85,6 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("general-save-history")
                     SettingRow(label: "Keep History", sublabel: "Auto-delete older captures", showDivider: true) {
                         Picker("", selection: $viewModel.historyRetention) {
                             Text("1 Week").tag("oneWeek")
@@ -100,7 +94,6 @@ struct GeneralSettingsView: View {
                         }
                         .frame(width: 130)
                     }
-                    .searchHighlightTarget("general-keep-history")
                 }
             }
 
@@ -111,19 +104,16 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("general-diagnostic-logging")
                     SettingRow(label: "Diagnostic Logs", sublabel: "Open Capso's local log folder", showDivider: true) {
                         ExternalLinkButton(title: "Open", icon: "folder") {
                             openDiagnosticLogs()
                         }
                     }
-                    .searchHighlightTarget("general-diagnostic-logs")
                     SettingRow(label: "Crash Reports", sublabel: "Open macOS DiagnosticReports", showDivider: true) {
                         ExternalLinkButton(title: "Open", icon: "doc.text.magnifyingglass") {
                             openCrashReports()
                         }
                     }
-                    .searchHighlightTarget("general-crash-reports")
                 }
             }
 
@@ -156,10 +146,8 @@ struct GeneralSettingsView: View {
                         }
                     }
                 }
-                .searchHighlightTarget("general-about")
             }
         }
-        .searchHighlightTarget("general-tab")
         .sheet(isPresented: $showingAutomationURLs) {
             AutomationURLsSheetView(isPresented: $showingAutomationURLs)
         }

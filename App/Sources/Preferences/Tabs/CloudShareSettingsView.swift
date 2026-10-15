@@ -15,10 +15,9 @@ struct CloudShareSettingsView: View {
             if viewModel.isCloudShareConfigured {
                 configuredView
             } else {
-                notConfiguredView
+                CloudShareSetupPrompt { showWizard = true }
             }
         }
-        .searchHighlightTarget("cloudshare-tab")
         .sheet(isPresented: $showWizard) {
             CloudShareWizardView(viewModel: viewModel, onComplete: {
                 showWizard = false
@@ -44,27 +43,6 @@ struct CloudShareSettingsView: View {
         }
     }
 
-    private var notConfiguredView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "icloud")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text(String(localized: "Cloud Share is not set up yet"))
-                .font(.headline)
-            Text(String(localized: "Connect your own cloud storage bucket to share captures with one click."))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button(String(localized: "Set up Cloud Share")) {
-                showWizard = true
-            }
-            .controlSize(.large)
-            .buttonStyle(.borderedProminent)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     private var configuredView: some View {
         VStack(alignment: .leading, spacing: 24) {
             SettingGroup(title: "Status") {
@@ -79,7 +57,6 @@ struct CloudShareSettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .searchHighlightTarget("cloudshare-provider")
                     SettingRow(label: "Public URL Prefix", showDivider: true) {
                         Text(viewModel.cloudShareURLPrefix ?? "—")
                             .font(.system(size: 12))
@@ -121,7 +98,6 @@ struct CloudShareSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    .searchHighlightTarget("cloudshare-auto-upload")
                     SettingRow(
                         label: "Copy Link When Upload Starts",
                         sublabel: "Paste the link right away; it works once the upload finishes",
@@ -246,27 +222,8 @@ struct CloudShareSettingsView: View {
         case .failure(let err):
             testResult = TestResultAlert(
                 title: String(localized: "Test failed"),
-                message: humanize(err)
+                message: CloudShareSettingsSupport.humanize(err)
             )
-        }
-    }
-
-    private func humanize(_ err: ShareError) -> String {
-        switch err {
-        case .notConfigured:
-            return String(localized: "Configuration is incomplete. Re-run the wizard.")
-        case .invalidCredentials:
-            return String(localized: "The storage provider rejected the credentials. Verify the access key, secret, and bucket permissions.")
-        case .invalidURLPrefix(let reason):
-            return String(format: String(localized: "Invalid public URL prefix: %@"), reason)
-        case .network(let underlying):
-            return String(format: String(localized: "Network error: %@"), underlying)
-        case .quotaExceeded:
-            return String(localized: "Storage quota exceeded — free up space in your provider dashboard.")
-        case .publicAccessUnreachable:
-            return String(localized: "Upload worked, but the file isn't publicly reachable. Enable public access or use a public custom domain.")
-        case .unknown(let s):
-            return s
         }
     }
 
@@ -324,13 +281,4 @@ struct CloudShareSettingsView: View {
             )
         }
     }
-}
-
-// Alert wrapper — `Identifiable` lets `.alert(item:)` re-trigger when a new
-// result lands (binding-by-Bool would skip the second presentation if the
-// user cancels then re-tests too quickly).
-struct TestResultAlert: Identifiable {
-    let id = UUID()
-    let title: String
-    let message: String
 }
